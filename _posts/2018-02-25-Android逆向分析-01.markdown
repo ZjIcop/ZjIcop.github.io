@@ -1,0 +1,154 @@
+##环境描述
+Mac 10.13.3 版本。
+Android studio 3.0+
+jdk1.8
+Android可开发的环境
+##安装工具
+[Android crack Tool](https://github.com/Jermic/Android-Crack-Tool)
+>需要重新覆盖内部的aapt和[ApkTool](https://bitbucket.org/iBotPeaches/apktool/downloads/)
+####步骤如下：
+>0、安装AndroidCrackTool ,和下载ApkTool.XXX.jar
+>1、在/Users/icop/Library/Android/sdk/build-tools目录下，拷贝最新系统版本文件夹内的的aapt 到
+/Applications/Android\ Crack\ Tool.app/Contents/Resources/ 中。   
+>2、重命名下载好的ApkTool.XXX.jar 为ApkTool.jar ，拷贝到 
+/Applications/Android\ Crack\ Tool.app/Contents/Resources/ 中。
+拷贝命令为 -- cp 参数 源文件 目标文件 -- [mac常用命令](http://blog.csdn.net/zhao15127334470/article/details/51173018)
+
+
+##编译测试的APK 
+####0、创建基本项目(利用Android Studio 创建Android)
+####1、编辑strings.xml文件，加入
+``<string name="same">相同</string> ``
+``<string name="nosame">不相同</string>``
+####2、编辑MainActivity.class,内容为:
+```java
+public class MainActivity extends Activity implements View.OnClickListener {
+
+    private EditText edt_username, edt_password;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        edt_username = (EditText) findViewById(R.id.main_edt_username);
+        edt_password = (EditText) findViewById(R.id.main_edt_password);
+    }
+
+    @Override
+    public void onClick(View v) {
+    //点击判断是否相等，如果相等则提示相同，否则则提示不相同
+        boolean b = checkSN(edt_username.getText().toString(), edt_password.getText().toString());
+        if (b) {
+            Toast.makeText(this, getResources().getString(R.string.same), Toast.LENGTH_SHORT).show();
+        } else
+            Toast.makeText(this, getResources().getString(R.string.nosame), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * 计算用户名和注册码是否相等。
+     */
+    public boolean checkSN(String userName, String sn) {
+        if (TextUtils.isEmpty(userName) || TextUtils.isEmpty(sn)) {
+            return false;
+        }
+        return userName.equals(sn);
+    }
+
+}
+```
+####3、编辑activity_main.xml文件
+```java
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/main_edt_username"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <EditText
+        android:id="@+id/main_edt_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:text="注册"
+        android:onClick="onClick"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>
+
+```
+####4、编译APK，打包并且签名Build->Generate Signed APk 生成APP。
+
+
+##分析APP （不想生成的话，用这个我生成的 [app-01.apk](https://github.com/ZjIcop/ZjIcop.github.io/tree/master/apk/app-01.apk)
+###目标，不知道注册码的情况下，随便填写一个都验证成功。
+AndroidCrackTool工具打开，点击设置，选择ApkTool,点击反编译APK，再点击浏览，选择刚才编译的APP，点击执行。生成完毕后打开目录。
+####开始分析
+APP使用的逻辑为 点击按钮，判断是否相等。会有提示。那么切入点先从提示开始。找到``生成目录/res/values/strings.xml``，打开此文件
+```java
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+   //省略
+    <string name="nosame">不相同</string>
+    <string name="same">相同</string>
+    //省略
+</resources>
+```
+知道name 为 same ，然后我们打开 ``生成目录/res/values/public.xml``该文件为资源文件ID和内容的对应文件，搜索到  `same`所在的地方，找到ID 
+```java
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  //省略
+  //分析该定义结构为 type指定的是类型，name指定的是key
+  //猜测正常使用如，R.string.same中，string就是下面的type，same就是下面的name，我们可以在查找刚才 activity_main.xml文件中的控件id定义，
+  R.id.main_edt_username来验证
+   <public type="string" name="nosame" id="0x7f0b0020" />
+   <public type="string" name="same" id="0x7f0b0021" />
+  //省略
+</resources>
+```
+
+知道same的ID为0x7f0b0021 ,用编辑器（我这里sublime Text）打开MainActivity.smail(``生成目录/smail/com/包名/..``)
+搜索 0x7f0b0021 所在的地方。如下贴部分代码,分析写在代码里面。相关的smail在上一篇博文里。 分析思路 跟着序号走
+
+```java
+//省略
+    :cond_1
+    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z #3、搜索到的Z值，这个invoke 调用方法，方法有两个参数寄存器。方法里面的返回的equals的方法判断结果，赋值给Z。如果不明确这个代码执行地址，可以往上找一层，.method开头的就是方法的地址
+    move-result v0 #4、把结果放到v0寄存器中
+//省略
+    .line 25 
+    .local v0, "b":Z #2、指定一个本地寄存器，知道 Z 指的是boolen,那“b”:Z 就是赋值。搜索Z所在的地方
+    if-eqz v0, :cond_0 # 1、if-eqz 是等于0，如果v0等于0的话，则执行这个，那其实如果我们要相反的意思的话，直接该if-nez v0,cond_0 就可以了。接着分析v0 哪里赋值的。
+
+    .line 26
+    invoke-virtual {p0}, Lcom/zj/crackme/MainActivity;->getResources()Landroid/content/res/Resources;
+
+    move-result-object v1
+
+    const v2, 0x7f0b0021 # 0、搜索到的地址，0x7f0b0021 赋值给v2。知道这个在条件判断体内，那我们找条件判断语句 if-xxx什么的。
+
+    invoke-virtual {v1, v2}, Landroid/content/res/Resources;->getString(I)Ljava/lang/String;
+
+    move-result-object v1 #这个指的是函数前面返回的是对象
+
+    invoke-static {p0, v1, v3},#静态嗲用方法 Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Landroid/widget/Toast;->show()V
+
+    .line 29
+    :goto_0
+    return-void
+//省略
+```
+
+大致分析完成。可以达到目标。修改``if-eqz v0``为``if-nez v0``。
+重新编译
+Android Crack tool ,点击重建APK，点击浏览 选择目录（app-release-O),点击执行，执行完成后，点击签名APK，然后选择刚生成的APP（app-release-O-R.apk），点击执行。然后安装测试下可以不可以！
