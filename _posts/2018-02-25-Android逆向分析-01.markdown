@@ -11,10 +11,13 @@ Android可开发的环境
 #### 步骤如下：
 
 >0、安装AndroidCrackTool ,和下载ApkTool.XXX.jar
+
 >1、在/Users/icop/Library/Android/sdk/build-tools目录下，拷贝最新系统版本文件夹内的的aapt 到
 /Applications/Android\ Crack\ Tool.app/Contents/Resources/ 中。   
+
 >2、重命名下载好的ApkTool.XXX.jar 为ApkTool.jar ，拷贝到 
 /Applications/Android\ Crack\ Tool.app/Contents/Resources/ 中。
+
 拷贝命令为 -- cp 参数 源文件 目标文件 -- [mac常用命令](http://blog.csdn.net/zhao15127334470/article/details/51173018)
 
 
