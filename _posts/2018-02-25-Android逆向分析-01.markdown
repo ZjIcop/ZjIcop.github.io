@@ -132,25 +132,25 @@ APP使用的逻辑为 点击按钮，判断是否相等。会有提示。那么�
 ```java
 //省略
     :cond_1
-    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z #3、搜索到的Z值，这个invoke 调用方法，方法有两个参数寄存器。方法里面的返回的equals的方法判断结果，赋值给Z。如果不明确这个代码执行地址，可以往上找一层，.method开头的就是方法的地址
+    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z //3、搜索到的Z值，这个invoke 调用方法，方法有两个参数寄存器。方法里面的返回的equals的方法判断结果，赋值给Z。如果不明确这个代码执行地址，可以往上找一层，.method开头的就是方法的地址
     move-result v0 #4、把结果放到v0寄存器中
 //省略
     .line 25 
-    .local v0, "b":Z #2、指定一个本地寄存器，知道 Z 指的是boolen,那“b”:Z 就是赋值。搜索Z所在的地方
-    if-eqz v0, :cond_0 # 1、if-eqz 是等于0，如果v0等于0的话，则执行这个，那其实如果我们要相反的意思的话，直接该if-nez v0,cond_0 就可以了。接着分析v0 哪里赋值的。
+    .local v0, "b":Z //2、指定一个本地寄存器，知道 Z 指的是boolen,那“b”:Z 就是赋值。搜索Z所在的地方
+    if-eqz v0, :cond_0 // 1、if-eqz 是等于0，如果v0等于0的话，则执行这个，那其实如果我们要相反的意思的话，直接该if-nez v0,cond_0 就可以了。接着分析v0 哪里赋值的。
 
     .line 26
     invoke-virtual {p0}, Lcom/zj/crackme/MainActivity;->getResources()Landroid/content/res/Resources;
 
     move-result-object v1
 
-    const v2, 0x7f0b0021 # 0、搜索到的地址，0x7f0b0021 赋值给v2。知道这个在条件判断体内，那我们找条件判断语句 if-xxx什么的。
+    const v2, 0x7f0b0021 // 0、搜索到的地址，0x7f0b0021 赋值给v2。知道这个在条件判断体内，那我们找条件判断语句 if-xxx什么的。
 
     invoke-virtual {v1, v2}, Landroid/content/res/Resources;->getString(I)Ljava/lang/String;
 
-    move-result-object v1 #这个指的是函数前面返回的是对象
+    move-result-object v1 //这个指的是函数前面返回的是对象
 
-    invoke-static {p0, v1, v3},#静态嗲用方法 Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
+    invoke-static {p0, v1, v3},Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;//静态调用用方法 
 
     move-result-object v1
 
