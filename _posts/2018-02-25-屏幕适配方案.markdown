@@ -1,0 +1,301 @@
+### 说明
+#### Android应用在运行的时候，不论你定义的是dp，还是pt还是什么的，都会转换成px。这个方法是在
+android.util.TypedValue 类里面的applyDimension（）；里面会将各种单位转换成px;
+``java
+public static float applyDimension(int unit, float value,  
+DisplayMetrics metrics)  
+{  
+    switch (unit) { 
+    //px：pixel 
+    case COMPLEX_UNIT_PX:  
+    return value;  
+    //dp（dip）
+    case COMPLEX_UNIT_DIP:  
+    return value * metrics.density; 
+    //sp  
+    case COMPLEX_UNIT_SP:  
+    return value * metrics.scaledDensity;  
+    //pt ： 1/72英寸
+    case COMPLEX_UNIT_PT:  
+    return value * metrics.xdpi * (1.0f/72); 
+    //in： inch 英寸 
+    case COMPLEX_UNIT_IN:  
+    return value * metrics.xdpi;  
+    //mm ： 毫米  1英寸=25.4毫米
+    case COMPLEX_UNIT_MM:  
+    return value * metrics.xdpi * (1.0f/25.4f);  
+}  
+return 0;  
+} 
+``
+屏幕适配思路，如果，在传进去的DisplayMetrics,定义成设计稿的相应的尺寸，那我们是不是就不需要再考虑各种适配了。
+那View 是怎么调用这个方法的，以常用的Textview 为例子，其设置尺寸，为setTextSize()方法
+``java
+public void setTextSize(int unit, float size) {
+Context c = getContext();
+Resources r;
+
+if (c == null)
+r = Resources.getSystem();
+else
+r = c.getResources();
+
+setRawTextSize(TypedValue.applyDimension(
+unit, size, r.getDisplayMetrics()));
+}
+``
+其中的Resources.getDisplayMetrics(),继续追踪。Resources类，它是资源访问控制类。
+那我们以pt为例子，反向计算设计稿的xdpi值。
+Resources resources = context.getResources();
+resources.getDisplayMetrics().xdpi = size.x/designWidth*72f;
+
+``java
+public class ScreenUtils
+{  
+    private ScreenUtils()  
+    {  
+        /* cannot be instantiated */  
+        throw new UnsupportedOperationException("cannot be instantiated");  
+    }
+    public static int dip2px(Context context, float dpValue) {
+    final float scale = context.getResources().getDisplayMetrics().density;
+    return (int) (dpValue * scale + 0.5f);
+}
+
+/** 
+* 获得屏幕高度 
+*  
+* @param context 
+* @return 
+*/  
+public static int getScreenWidth(Context context)  
+{  
+    WindowManager wm = (WindowManager) context  
+    .getSystemService(WINDOW_SERVICE);
+    DisplayMetrics outMetrics = new DisplayMetrics();  
+    wm.getDefaultDisplay().getMetrics(outMetrics);  
+    return outMetrics.widthPixels;  
+}  
+
+/** 
+* 获得屏幕宽度 
+*  
+* @param context 
+* @return 
+*/  
+public static int getScreenHeight(Context context)  
+{  
+    WindowManager wm = (WindowManager) context
+    .getSystemService(WINDOW_SERVICE);
+    DisplayMetrics outMetrics = new DisplayMetrics();
+    wm.getDefaultDisplay().getMetrics(outMetrics);  
+    return outMetrics.heightPixels;  
+}  
+
+/** 
+* 获得状态栏的高度 
+*  
+* @param context 
+* @return 
+*/  
+public static int getStatusHeight(Context context)  
+{  
+  
+    int statusHeight = -1;  
+    try  
+    {  
+        Class<?> clazz = Class.forName("com.android.internal.R$dimen");  
+        Object object = clazz.newInstance();  
+        int height = Integer.parseInt(clazz.getField("status_bar_height")  
+        .get(object).toString());  
+        statusHeight = context.getResources().getDimensionPixelSize(height);  
+        } catch (Exception e)  
+        {  
+            e.printStackTrace();  
+        }  
+        return statusHeight;  
+    }  
+    
+    /** 
+    * 获取当前屏幕截图，包含状态栏 
+    *  
+    * @param activity 
+    * @return 
+    */  
+    public static Bitmap snapShotWithStatusBar(Activity activity)
+    {  
+        View view = activity.getWindow().getDecorView();
+        view.setDrawingCacheEnabled(true);  
+        view.buildDrawingCache();  
+        Bitmap bmp = view.getDrawingCache();  
+        int width = getScreenWidth(activity);  
+        int height = getScreenHeight(activity);  
+        Bitmap bp = null;  
+        bp = Bitmap.createBitmap(bmp, 0, 0, width, height);  
+        view.destroyDrawingCache();  
+        return bp;  
+        
+    }  
+    
+    /** 
+    * 获取当前屏幕截图，不包含状态栏 
+    *  
+    * @param activity 
+    * @return 
+    */  
+    public static Bitmap snapShotWithoutStatusBar(Activity activity)  
+    {  
+        View view = activity.getWindow().getDecorView();  
+        view.setDrawingCacheEnabled(true);  
+        view.buildDrawingCache();  
+        Bitmap bmp = view.getDrawingCache();  
+        Rect frame = new Rect();
+        activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(frame);  
+        int statusBarHeight = frame.top;  
+        
+        int width = getScreenWidth(activity);  
+        int height = getScreenHeight(activity);  
+        Bitmap bp = null;  
+        bp = Bitmap.createBitmap(bmp, 0, statusBarHeight, width, height  
+            - statusBarHeight);  
+            view.destroyDrawingCache();  
+            return bp;  
+            
+        }
+        /**
+        * 重新计算displayMetrics.xhdpi, 使单位pt重定义为设计稿的相对长度
+        * @see #activate()
+        *
+        * @param context
+        * @param designWidth 设计稿的宽度
+        */
+        private static void resetDensity(Context context, float designWidth){
+            if(context == null)
+            return;
+
+            Point size = new Point();
+            ((WindowManager)context.getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getSize(size);
+
+            Resources resources = context.getResources();
+
+            resources.getDisplayMetrics().xdpi = size.x/designWidth*72f;
+
+            //解决MIUI更改框架导致的MIUI7+Android5.1.1上出现的失效问题(以及极少数基于这部分miui去掉art然后置入xposed的手机)
+            if("MiuiResources".equals(resources.getClass().getSimpleName()) || "XResources".equals(resources.getClass().getSimpleName())){
+                try {
+                    Field field = Resources.class.getDeclaredField("mTmpMetrics");
+                    field.setAccessible(true);
+                    DisplayMetrics metrics = (DisplayMetrics) field.get(resources);
+                    metrics.xdpi = size.x/designWidth*72f;
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+
+            /**
+            * 恢复displayMetrics为系统原生状态，单位pt恢复为长度单位磅
+            * @see #inactivate()
+            *
+            * @param context
+            */
+            private static void restoreDensity(Context context){
+                context.getResources().getDisplayMetrics().setToDefaults();
+            }
+
+            /**
+            * 转换dp为px
+            * @param context
+            * @param value 需要转换的dp值
+            * @return
+            */
+            public static float dp2px(Context context, float value){
+                return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, context.getResources().getDisplayMetrics());
+            }
+
+            /**
+            * 转换pt为px
+            * @param context
+            * @param value 需要转换的pt值，若context.resources.displayMetrics经过resetDensity()的修改则得到修正的相对长度，否则得到原生的磅
+            * @return
+            */
+            public static float pt2px(Context context, float value){
+                return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PT, value, context.getResources().getDisplayMetrics());
+            }
+
+
+
+            private Application.ActivityLifecycleCallbacks activityLifecycleCallbacks;
+            private Application mApplication;
+            private float designWidth = 375;
+
+            /**
+            *
+            * @param application
+            * @param width 设计稿宽度
+            */
+            public ScreenUtils(Application application, float width){
+                mApplication = application;
+                designWidth = width;
+
+                activityLifecycleCallbacks = new Application.ActivityLifecycleCallbacks() {
+                    @Override
+                    public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+                        //通常情况下application与activity得到的resource虽然不是一个实例，但是displayMetrics是同一个实例，只需调用一次即可
+                        //为了面对一些不可预计的情况以及向上兼容，分别调用一次较为保险
+                        resetDensity(mApplication, designWidth);
+                        resetDensity(activity, designWidth);
+                        AppManager.getAppManager().addActivity(activity);
+                    }
+
+                    @Override
+                    public void onActivityStarted(Activity activity) {
+
+                    }
+
+                    @Override
+                    public void onActivityResumed(Activity activity) {
+
+                    }
+
+                    @Override
+                    public void onActivityPaused(Activity activity) {
+
+                    }
+
+                    @Override
+                    public void onActivityStopped(Activity activity) {
+
+                    }
+
+                    @Override
+                    public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+
+                    }
+
+                    @Override
+                    public void onActivityDestroyed(Activity activity) {
+                        AppManager.getAppManager().removeActivity(activity);
+                    }
+                };
+            }
+
+            /**
+            * 激活本方案
+            */
+            public void activate(){
+                resetDensity(mApplication, designWidth);
+                mApplication.registerActivityLifecycleCallbacks(activityLifecycleCallbacks);
+            }
+
+            /**
+            * 恢复系统原生方案
+            */
+            public void inactivate(){
+                restoreDensity(mApplication);
+                mApplication.unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks);
+            }
+        } 
+        ``` 

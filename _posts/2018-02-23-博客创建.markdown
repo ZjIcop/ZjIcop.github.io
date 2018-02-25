@@ -1,0 +1,12 @@
+---
+layout: post
+title: "博客创建"
+date: 2017-04-06 13:32:20 +0300
+description: You’ll find this post in your `_posts` directory. Go ahead and edit it and re-build the site to see your changes. # Add post description (optional)
+img: "2-2.png" # Add image post (optional)
+---
+
+# 个人概叙
+
+从事Android开发已经2年多了。没有合格意义上的连续写过博客。一般都是记在Quiver上。
+最近学习Android软件逆向中，借此机会，将学习的过程和示例代码均记在博客中。
