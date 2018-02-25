@@ -1,2 +1,1 @@
-# ZjIcop.github.io
-博客blog
+# 博客安装
